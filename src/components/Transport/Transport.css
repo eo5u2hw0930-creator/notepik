@@ -1,0 +1,127 @@
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  height: 48px;
+  padding: 0 16px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.transport-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.transport-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.transport-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+.transport-btn:active {
+  transform: scale(0.95);
+}
+
+.play-btn {
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+}
+.play-btn:hover {
+  background: var(--accent-hover);
+  color: #fff;
+}
+.play-btn.playing {
+  background: var(--warning);
+}
+
+.loop-btn.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.transport-position {
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 80px;
+  text-align: center;
+}
+.position-sep {
+  color: var(--text-dim);
+  margin: 0 1px;
+}
+
+.transport-bpm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bpm-adjust {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.bpm-adjust:active {
+  background: var(--surface-3);
+}
+
+.bpm-display {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.bpm-input {
+  width: 48px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+  -moz-appearance: textfield;
+}
+.bpm-input::-webkit-outer-spin-button,
+.bpm-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+.bpm-input:focus {
+  outline: none;
+}
+
+.bpm-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 500;
+}

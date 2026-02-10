@@ -1,0 +1,124 @@
+.mixer {
+  height: 140px;
+  background: var(--surface-1);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.mixer-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mixer-channels {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  gap: 1px;
+  padding: 4px;
+}
+
+.mixer-channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+  padding: 4px;
+}
+
+.mixer-fader-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mixer-fader {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 4px;
+  height: 60px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.mixer-fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mixer-pan-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.mixer-pan {
+  width: 44px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.mixer-pan::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 8px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--text-dim);
+  cursor: pointer;
+}
+
+.mixer-mute {
+  width: 24px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mixer-mute.active {
+  background: var(--warning);
+  color: #000;
+  border-color: var(--warning);
+}
+
+.mixer-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  border-top: 2px solid transparent;
+  padding-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 56px;
+}
+
+@media (max-width: 600px) {
+  .mixer {
+    height: 100px;
+  }
+  .mixer-fader {
+    height: 40px;
+  }
+}

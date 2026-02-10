@@ -1,0 +1,90 @@
+/* === notepik Dark Theme === */
+:root {
+  /* Backgrounds */
+  --bg: #0f0f1a;
+  --surface-1: #161625;
+  --surface-2: #1c1c30;
+  --surface-3: #24243d;
+
+  /* Borders */
+  --border: #2a2a45;
+
+  /* Text */
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-dim: #6a6a82;
+
+  /* Accent */
+  --accent: #5b7fff;
+  --accent-hover: #7094ff;
+  --accent-dim: rgba(91, 127, 255, 0.15);
+
+  /* Status */
+  --error: #ff4444;
+  --warning: #ffaa33;
+  --success: #44cc66;
+
+  /* Font */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color-scheme: dark;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-1);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a5a;
+}
+
+/* Touch optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, select, button {
+  font-family: inherit;
+}
+
+/* Selection */
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
