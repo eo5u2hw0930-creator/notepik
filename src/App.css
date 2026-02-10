@@ -3,21 +3,6 @@
   height: 100vh;
   height: 100dvh;
   display: flex;
-  flex-direction: column;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text-primary);
-}
-
-.daw-main {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-  overflow: hidden;
-}
-
-@media (max-width: 600px) {
-  .daw-main {
-    flex-direction: column;
-  }
+  background: #0f0f1a;
 }

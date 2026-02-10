@@ -1,284 +1,252 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
-import { useDAWStore } from '../../store/useDAWStore';
 import { synthEngine } from '../../audio/SynthEngine';
 import { noteToName, isBlackKey } from '../../types';
 import './PianoRoll.css';
 
 const MIN_NOTE = 36;  // C2
 const MAX_NOTE = 96;  // C7
-const TOTAL_NOTES = MAX_NOTE - MIN_NOTE + 1;
-const NOTE_HEIGHT = 24;
-const PIXELS_PER_TICK = 0.18;
-const KEYBOARD_WIDTH = 52;
-const TOTAL_BARS = 32;
+const NOTE_HEIGHT = 28;
+const KEYBOARD_WIDTH = 64;
+const GRID_CELL_WIDTH = 50;
+const TOTAL_CELLS = 64; // 16 bars * 4 beats
 
 export function PianoRoll() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
-  const [scrollPos, setScrollPos] = useState({ x: 0, y: 0 });
-  const didInitScroll = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const [scroll, setScroll] = useState({ x: 0, y: 0 });
+  const initedScroll = useRef(false);
 
-  const selectedTrackId = useDAWStore((s) => s.selectedTrackId);
-  const tracks = useDAWStore((s) => s.project.tracks);
-  const gridSubdivision = useDAWStore((s) => s.gridSubdivision);
-  const ticksPerBeat = useDAWStore((s) => s.project.ticksPerBeat);
-  const playbackTick = useDAWStore((s) => s.playback.currentTick);
-  const addNote = useDAWStore((s) => s.addNote);
-  const removeNote = useDAWStore((s) => s.removeNote);
+  // Simple local note state (no store needed for now)
+  const [notes, setNotes] = useState<{ pitch: number; col: number }[]>([]);
 
-  const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
-
-  const totalWidth = TOTAL_BARS * ticksPerBeat * 4 * PIXELS_PER_TICK + KEYBOARD_WIDTH;
-  const totalHeight = TOTAL_NOTES * NOTE_HEIGHT;
-
-  const snapTick = useCallback(
-    (tick: number) => Math.max(0, Math.round(tick / gridSubdivision) * gridSubdivision),
-    [gridSubdivision],
-  );
+  const totalWidth = KEYBOARD_WIDTH + TOTAL_CELLS * GRID_CELL_WIDTH;
+  const totalHeight = (MAX_NOTE - MIN_NOTE + 1) * NOTE_HEIGHT;
 
   // Resize
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const el = containerRef.current;
+    if (!el) return;
     const ro = new ResizeObserver(() => {
-      const rect = container.getBoundingClientRect();
-      setCanvasSize({ w: rect.width, h: rect.height });
+      const r = el.getBoundingClientRect();
+      setSize({ w: r.width, h: r.height });
     });
-    ro.observe(container);
+    ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  // Center around middle C once
+  // Center on middle C once
   useEffect(() => {
-    const sc = scrollContainerRef.current;
-    if (!sc || canvasSize.h === 0 || didInitScroll.current) return;
-    didInitScroll.current = true;
+    const sc = scrollRef.current;
+    if (!sc || size.h === 0 || initedScroll.current) return;
+    initedScroll.current = true;
     const middleC = 60;
-    sc.scrollTop = Math.max(0, (MAX_NOTE - middleC) * NOTE_HEIGHT - canvasSize.h / 2);
-    setScrollPos({ x: sc.scrollLeft, y: sc.scrollTop });
-  }, [canvasSize.h]);
+    sc.scrollTop = Math.max(0, (MAX_NOTE - middleC) * NOTE_HEIGHT - size.h / 2);
+    setScroll({ x: sc.scrollLeft, y: sc.scrollTop });
+  }, [size.h]);
 
-  // ===== Draw =====
+  // ====== DRAW ======
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || canvasSize.w === 0) return;
+    if (!canvas || size.w === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = canvasSize.w * dpr;
-    canvas.height = canvasSize.h * dpr;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    canvas.width = size.w * dpr;
+    canvas.height = size.h * dpr;
+    const ctx = canvas.getContext('2d')!;
     ctx.scale(dpr, dpr);
 
-    const sx = scrollPos.x;
-    const sy = scrollPos.y;
+    const sx = scroll.x;
+    const sy = scroll.y;
 
-    // BG
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
+    // === Background ===
+    ctx.fillStyle = '#12121f';
+    ctx.fillRect(0, 0, size.w, size.h);
 
-    // Rows
-    for (let note = MIN_NOTE; note <= MAX_NOTE; note++) {
-      const y = (MAX_NOTE - note) * NOTE_HEIGHT - sy;
-      if (y + NOTE_HEIGHT < 0 || y > canvasSize.h) continue;
+    // === Grid rows (behind everything) ===
+    for (let n = MIN_NOTE; n <= MAX_NOTE; n++) {
+      const y = (MAX_NOTE - n) * NOTE_HEIGHT - sy;
+      if (y + NOTE_HEIGHT < 0 || y > size.h) continue;
 
-      ctx.fillStyle = isBlackKey(note) ? '#16162a' : '#1e1e38';
-      ctx.fillRect(KEYBOARD_WIDTH, y, canvasSize.w - KEYBOARD_WIDTH, NOTE_HEIGHT);
+      ctx.fillStyle = isBlackKey(n) ? '#151520' : '#1a1a28';
+      ctx.fillRect(KEYBOARD_WIDTH, y, size.w - KEYBOARD_WIDTH, NOTE_HEIGHT);
 
-      ctx.strokeStyle = '#2a2a4a';
+      ctx.strokeStyle = '#222233';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(KEYBOARD_WIDTH, y + NOTE_HEIGHT);
-      ctx.lineTo(canvasSize.w, y + NOTE_HEIGHT);
+      ctx.lineTo(size.w, y + NOTE_HEIGHT);
       ctx.stroke();
     }
 
-    // Grid
-    const startTick = Math.max(0, Math.floor(sx / PIXELS_PER_TICK / gridSubdivision) * gridSubdivision);
-    const endTick = (sx + canvasSize.w) / PIXELS_PER_TICK;
+    // === Grid columns ===
+    for (let i = 0; i <= TOTAL_CELLS; i++) {
+      const x = KEYBOARD_WIDTH + i * GRID_CELL_WIDTH - sx;
+      if (x < KEYBOARD_WIDTH || x > size.w) continue;
 
-    for (let tick = startTick; tick <= endTick; tick += gridSubdivision) {
-      const x = tick * PIXELS_PER_TICK - sx + KEYBOARD_WIDTH;
-      if (x < KEYBOARD_WIDTH) continue;
-
-      const isBar = tick % (ticksPerBeat * 4) === 0;
-      const isBeat = tick % ticksPerBeat === 0;
-
-      ctx.strokeStyle = isBar ? '#3a3a5a' : isBeat ? '#2a2a4a' : '#222244';
-      ctx.lineWidth = isBar ? 1.5 : 0.5;
+      const isBeat4 = i % 4 === 0;
+      ctx.strokeStyle = isBeat4 ? '#333348' : '#222233';
+      ctx.lineWidth = isBeat4 ? 1.5 : 0.5;
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasSize.h);
+      ctx.lineTo(x, size.h);
       ctx.stroke();
 
-      if (isBar) {
-        ctx.fillStyle = '#666';
+      // Bar number
+      if (isBeat4) {
+        ctx.fillStyle = '#555';
         ctx.font = '11px sans-serif';
-        ctx.fillText(String(tick / (ticksPerBeat * 4) + 1), x + 4, 14);
+        ctx.fillText(String(i / 4 + 1), x + 4, 14);
       }
     }
 
-    // Notes
-    for (const track of tracks) {
-      const isSelected = track.id === selectedTrackId;
-      ctx.globalAlpha = isSelected ? 1 : 0.15;
+    // === Notes ===
+    for (const note of notes) {
+      const x = KEYBOARD_WIDTH + note.col * GRID_CELL_WIDTH - sx;
+      const y = (MAX_NOTE - note.pitch) * NOTE_HEIGHT - sy;
+      if (x + GRID_CELL_WIDTH < KEYBOARD_WIDTH || x > size.w) continue;
+      if (y + NOTE_HEIGHT < 0 || y > size.h) continue;
 
-      for (const note of track.notes) {
-        const x = note.startTick * PIXELS_PER_TICK - sx + KEYBOARD_WIDTH;
-        const y = (MAX_NOTE - note.pitch) * NOTE_HEIGHT - sy;
-        const w = Math.max(note.duration * PIXELS_PER_TICK, 6);
+      ctx.fillStyle = '#5b7fff';
+      ctx.beginPath();
+      ctx.roundRect(x + 1, y + 2, GRID_CELL_WIDTH - 2, NOTE_HEIGHT - 4, 4);
+      ctx.fill();
 
-        if (x + w < KEYBOARD_WIDTH || x > canvasSize.w) continue;
-        if (y + NOTE_HEIGHT < 0 || y > canvasSize.h) continue;
+      // Label
+      if (GRID_CELL_WIDTH > 30) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(noteToName(note.pitch), x + 5, y + NOTE_HEIGHT / 2 + 4);
+      }
+    }
 
-        ctx.fillStyle = track.color;
+    // === Keyboard ===
+    // Background
+    ctx.fillStyle = '#0e0e18';
+    ctx.fillRect(0, 0, KEYBOARD_WIDTH, size.h);
+
+    for (let n = MIN_NOTE; n <= MAX_NOTE; n++) {
+      const y = (MAX_NOTE - n) * NOTE_HEIGHT - sy;
+      if (y + NOTE_HEIGHT < 0 || y > size.h) continue;
+
+      const black = isBlackKey(n);
+
+      if (black) {
+        // Black key - dark with slight color
+        ctx.fillStyle = '#1a1a28';
+        ctx.fillRect(0, y, KEYBOARD_WIDTH, NOTE_HEIGHT);
+        // Inner darker area to look like a real black key
+        ctx.fillStyle = '#111118';
         ctx.beginPath();
-        ctx.roundRect(x, y + 2, w, NOTE_HEIGHT - 4, 4);
+        ctx.roundRect(2, y + 2, KEYBOARD_WIDTH - 12, NOTE_HEIGHT - 4, 3);
         ctx.fill();
-
-        if (w > 35 && isSelected) {
-          ctx.fillStyle = '#fff';
-          ctx.font = '11px sans-serif';
-          ctx.fillText(noteToName(note.pitch), x + 5, y + NOTE_HEIGHT / 2 + 4);
-        }
+      } else {
+        // White key - lighter
+        ctx.fillStyle = '#d8d8e0';
+        ctx.fillRect(0, y, KEYBOARD_WIDTH, NOTE_HEIGHT);
+        // Subtle 3D effect
+        ctx.fillStyle = '#e8e8f0';
+        ctx.fillRect(0, y, KEYBOARD_WIDTH - 8, NOTE_HEIGHT - 1);
       }
-      ctx.globalAlpha = 1;
-    }
 
-    // Playback cursor
-    if (playbackTick > 0) {
-      const cx = playbackTick * PIXELS_PER_TICK - sx + KEYBOARD_WIDTH;
-      if (cx >= KEYBOARD_WIDTH && cx <= canvasSize.w) {
-        ctx.strokeStyle = '#ff4444';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(cx, 0);
-        ctx.lineTo(cx, canvasSize.h);
-        ctx.stroke();
-      }
-    }
-
-    // Keyboard
-    ctx.fillStyle = '#111128';
-    ctx.fillRect(0, 0, KEYBOARD_WIDTH, canvasSize.h);
-
-    for (let note = MIN_NOTE; note <= MAX_NOTE; note++) {
-      const y = (MAX_NOTE - note) * NOTE_HEIGHT - sy;
-      if (y + NOTE_HEIGHT < 0 || y > canvasSize.h) continue;
-
-      ctx.fillStyle = isBlackKey(note) ? '#1a1a32' : '#2a2a4a';
-      ctx.fillRect(0, y, KEYBOARD_WIDTH, NOTE_HEIGHT);
-
-      ctx.strokeStyle = '#333355';
+      // Key border
+      ctx.strokeStyle = black ? '#222230' : '#b0b0c0';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(0, y + NOTE_HEIGHT);
       ctx.lineTo(KEYBOARD_WIDTH, y + NOTE_HEIGHT);
       ctx.stroke();
 
-      if (note % 12 === 0) {
-        ctx.fillStyle = '#999';
+      // Note name on every C, or on black keys
+      if (n % 12 === 0) {
+        // C notes - show label on white key
+        ctx.fillStyle = '#444';
         ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(noteToName(note), 4, y + NOTE_HEIGHT / 2 + 4);
+        ctx.fillText(noteToName(n), 4, y + NOTE_HEIGHT / 2 + 4);
+      } else if (black) {
+        // Black key label
+        ctx.fillStyle = '#666';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(noteToName(n), 4, y + NOTE_HEIGHT / 2 + 3);
       }
     }
 
-    ctx.strokeStyle = '#444466';
-    ctx.lineWidth = 1;
+    // Divider line
+    ctx.strokeStyle = '#444460';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(KEYBOARD_WIDTH, 0);
-    ctx.lineTo(KEYBOARD_WIDTH, canvasSize.h);
+    ctx.lineTo(KEYBOARD_WIDTH, size.h);
     ctx.stroke();
-  }, [canvasSize, scrollPos, tracks, selectedTrackId, playbackTick, gridSubdivision, ticksPerBeat]);
 
-  // ===== Tap to add/remove notes =====
+  }, [size, scroll, notes]);
+
+  // ====== CLICK ======
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!selectedTrack || !selectedTrackId) return;
+    (e: React.MouseEvent) => {
+      const sc = scrollRef.current;
+      if (!sc) return;
 
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
+      const rect = sc.getBoundingClientRect();
       const localX = e.clientX - rect.left;
       const localY = e.clientY - rect.top;
+      const sx = scroll.x;
+      const sy = scroll.y;
 
-      const sx = scrollPos.x;
-      const sy = scrollPos.y;
-
-      // Keyboard → preview
+      // Keyboard area → play sound
       if (localX < KEYBOARD_WIDTH) {
         const pitch = MAX_NOTE - Math.floor((localY + sy) / NOTE_HEIGHT);
         if (pitch >= MIN_NOTE && pitch <= MAX_NOTE) {
           synthEngine.init().then(() => {
-            synthEngine.previewNote(selectedTrack.instrument, pitch);
+            synthEngine.previewNote('synth-lead', pitch, 100, 300);
           });
         }
         return;
       }
 
-      // Grid area
-      const tick = (localX - KEYBOARD_WIDTH + sx) / PIXELS_PER_TICK;
+      // Grid area → add or remove note
+      const col = Math.floor((localX - KEYBOARD_WIDTH + sx) / GRID_CELL_WIDTH);
       const pitch = MAX_NOTE - Math.floor((localY + sy) / NOTE_HEIGHT);
 
-      if (pitch < MIN_NOTE || pitch > MAX_NOTE) return;
+      if (pitch < MIN_NOTE || pitch > MAX_NOTE || col < 0 || col >= TOTAL_CELLS) return;
 
-      // Existing note? → delete
-      const existing = selectedTrack.notes.find(
-        (n) => n.pitch === pitch && tick >= n.startTick && tick <= n.startTick + n.duration,
-      );
-
-      if (existing) {
-        removeNote(selectedTrackId, existing.id);
-      } else {
-        // Empty → add note
-        const snappedTick = snapTick(tick);
-        addNote(selectedTrackId, {
-          pitch,
-          startTick: snappedTick,
-          duration: gridSubdivision,
-          velocity: 100,
-        });
-        synthEngine.init().then(() => {
-          synthEngine.previewNote(selectedTrack.instrument, pitch);
-        });
-      }
+      setNotes(prev => {
+        const idx = prev.findIndex(n => n.pitch === pitch && n.col === col);
+        if (idx >= 0) {
+          // Remove existing
+          return prev.filter((_, i) => i !== idx);
+        } else {
+          // Add new + play sound
+          synthEngine.init().then(() => {
+            synthEngine.previewNote('synth-lead', pitch, 100, 200);
+          });
+          return [...prev, { pitch, col }];
+        }
+      });
     },
-    [selectedTrack, selectedTrackId, scrollPos, snapTick, gridSubdivision, addNote, removeNote],
+    [scroll],
   );
 
   // Scroll sync
   const handleScroll = useCallback(() => {
-    const sc = scrollContainerRef.current;
+    const sc = scrollRef.current;
     if (!sc) return;
-    setScrollPos({ x: sc.scrollLeft, y: sc.scrollTop });
+    setScroll({ x: sc.scrollLeft, y: sc.scrollTop });
   }, []);
-
-  if (!selectedTrack) {
-    return (
-      <div className="piano-roll-empty">
-        <p>트랙을 선택하세요</p>
-      </div>
-    );
-  }
 
   return (
     <div className="piano-roll" ref={containerRef}>
-      {/* Canvas behind - just renders, no interaction */}
       <canvas
         ref={canvasRef}
         className="piano-roll-canvas"
-        style={{ width: canvasSize.w, height: canvasSize.h }}
+        style={{ width: size.w, height: size.h }}
       />
-      {/* Scroll layer on top - handles scroll + click */}
       <div
         className="piano-roll-scroll"
-        ref={scrollContainerRef}
+        ref={scrollRef}
         onScroll={handleScroll}
-        onClick={handleClick as unknown as React.MouseEventHandler<HTMLDivElement>}
+        onClick={handleClick}
       >
         <div style={{ width: totalWidth, height: totalHeight }} />
       </div>
