@@ -3,6 +3,102 @@
   height: 100vh;
   height: 100dvh;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
   background: #0f0f1a;
 }
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 12px;
+  background: #161625;
+  border-bottom: 1px solid #2a2a45;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 28px;
+  background: #2a2a45;
+  margin: 0 4px;
+}
+
+.tb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: #1c1c30;
+  color: #a0a0b8;
+  font-size: 13px;
+  cursor: pointer;
+  gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.tb-btn:active { background: #24243d; }
+.tb-btn.active {
+  background: #5b7fff;
+  color: #fff;
+}
+.tb-btn.play-btn {
+  background: #5b7fff;
+  color: #fff;
+  width: 44px;
+  border-radius: 50%;
+}
+.tb-btn.play-btn.playing {
+  background: #ff5555;
+}
+
+.tb-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.toolbar-pos {
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8e8f0;
+  min-width: 60px;
+  text-align: center;
+}
+
+.toolbar-bpm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #a0a0b8;
+}
+.bpm-input {
+  width: 40px;
+  background: #1c1c30;
+  border: 1px solid #2a2a45;
+  border-radius: 4px;
+  color: #e8e8f0;
+  text-align: center;
+  font-size: 13px;
+  padding: 2px;
+  font-family: 'SF Mono', monospace;
+  -moz-appearance: textfield;
+}
+.bpm-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.bpm-input:focus { outline: none; border-color: #5b7fff; }
