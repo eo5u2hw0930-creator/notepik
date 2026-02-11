@@ -10,15 +10,36 @@
 
 /* ===== Toolbar ===== */
 .toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   height: 48px;
   padding: 0 12px;
   background: #161625;
   border-bottom: 1px solid #2a2a45;
-  gap: 12px;
   flex-shrink: 0;
   z-index: 10;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: center;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
 }
 
 .toolbar-group {
@@ -34,13 +55,30 @@
   margin: 0 4px;
 }
 
+/* Preset selector */
+.preset-select {
+  background: #1c1c30;
+  border: 1px solid #2a2a45;
+  border-radius: 6px;
+  color: #e8e8f0;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.preset-select:focus {
+  border-color: #5b7fff;
+}
+
+/* Buttons */
 .tb-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
+  min-width: 36px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: none;
   border-radius: 8px;
   background: #1c1c30;
@@ -59,7 +97,8 @@
 .tb-btn.play-btn {
   background: #5b7fff;
   color: #fff;
-  width: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
 }
 .tb-btn.play-btn.playing {
@@ -72,15 +111,18 @@
   fill: currentColor;
 }
 
+/* Position display */
 .toolbar-pos {
   font-family: 'SF Mono', 'JetBrains Mono', monospace;
   font-size: 16px;
   font-weight: 600;
   color: #e8e8f0;
-  min-width: 60px;
+  min-width: 50px;
   text-align: center;
+  margin-left: 8px;
 }
 
+/* BPM */
 .toolbar-bpm {
   display: flex;
   align-items: center;

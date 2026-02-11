@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { synthEngine } from '../../audio/SynthEngine';
 import { noteToName, isBlackKey } from '../../types';
+import type { InstrumentType } from '../../types';
 import './PianoRoll.css';
 
 // ===== Types =====
@@ -10,13 +11,15 @@ export interface NoteData {
   pitch: number;
   col: number;   // start column
   len: number;   // length in columns (>=1)
+  instrument: InstrumentType;
 }
 
 interface Props {
   tool: ToolType;
+  instrument: InstrumentType;
   notes: NoteData[];
   setNotes: Dispatch<SetStateAction<NoteData[]>>;
-  playCol: number; // -1 = not playing
+  playCol: number; // -1 = hidden, fractional for smooth animation
 }
 
 // ===== Constants =====
@@ -29,9 +32,17 @@ const TOTAL_CELLS = 64;
 const TIMELINE_HEIGHT = 24;
 const BEATS_PER_BAR = 4;
 
+const INSTRUMENT_COLORS: Record<InstrumentType, string> = {
+  'synth-lead': '#5b7fff',
+  'synth-pad': '#51cf66',
+  'synth-bass': '#ff6b6b',
+  'synth-pluck': '#fcc419',
+  'drums': '#cc5de8',
+};
+
 let nextId = 1;
 
-export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
+export function PianoRoll({ tool, instrument, notes, setNotes, playCol }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -130,7 +141,6 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
         ctx.fillStyle = '#666';
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText(String(i / BEATS_PER_BAR + 1), x + 4, 16);
-        // Tick mark
         ctx.strokeStyle = '#444';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -138,7 +148,6 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
         ctx.lineTo(x, TIMELINE_HEIGHT);
         ctx.stroke();
       } else {
-        // Small tick
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
@@ -187,8 +196,9 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
       if (x + w < KEYBOARD_WIDTH || x > size.w) continue;
       if (y + NOTE_HEIGHT < TIMELINE_HEIGHT || y > size.h) continue;
 
-      // Body
-      ctx.fillStyle = '#5b7fff';
+      // Body with instrument color
+      const color = INSTRUMENT_COLORS[note.instrument] || '#5b7fff';
+      ctx.fillStyle = color;
       ctx.beginPath();
       ctx.roundRect(x + 1, y + 2, w - 2, NOTE_HEIGHT - 4, 4);
       ctx.fill();
@@ -205,7 +215,7 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
       ctx.fillRect(x + w - 6, y + 4, 4, NOTE_HEIGHT - 8);
     }
 
-    // === Playback cursor ===
+    // === Playback cursor (smooth fractional position) ===
     if (playCol >= 0) {
       const cx = KEYBOARD_WIDTH + playCol * CELL_W - sx;
       if (cx >= KEYBOARD_WIDTH && cx <= size.w) {
@@ -291,10 +301,14 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
     if (!pos) return;
     const { lx, col, pitch } = pos;
 
-    // Keyboard
+    // Detect pen eraser button
+    const isPenEraser = e.pointerType === 'pen' && (e.button === 5 || (e.buttons & 32) !== 0);
+    const effectiveTool = isPenEraser ? 'erase' : tool;
+
+    // Keyboard preview
     if (lx < KEYBOARD_WIDTH) {
       if (pitch >= MIN_NOTE && pitch <= MAX_NOTE) {
-        synthEngine.init().then(() => synthEngine.previewNote('synth-lead', pitch, 100, 300));
+        synthEngine.init().then(() => synthEngine.previewNote(instrument, pitch, 100, 300));
       }
       return;
     }
@@ -303,16 +317,18 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
 
     const existing = findNoteAt(col, pitch);
 
-    if (tool === 'erase') {
+    // Erase mode (or pen eraser)
+    if (effectiveTool === 'erase') {
       if (existing) {
         setNotes(prev => prev.filter(n => n.id !== existing.id));
       }
       return;
     }
 
-    if (tool === 'select') {
+    // Select mode, OR draw mode clicking on existing note -> move/resize
+    if (effectiveTool === 'select' || (effectiveTool === 'draw' && existing)) {
       if (existing) {
-        // Check if clicking the resize handle (last 8px of note)
+        // Check if clicking the resize handle (last 10px of note)
         const noteEndX = KEYBOARD_WIDTH + (existing.col + existing.len) * CELL_W - scroll.x;
         const localNoteX = e.clientX - (scrollRef.current?.getBoundingClientRect().left ?? 0);
         if (localNoteX > noteEndX - 10) {
@@ -333,23 +349,20 @@ export function PianoRoll({ tool, notes, setNotes, playCol }: Props) {
       return;
     }
 
-    // tool === 'draw'
-    if (existing) {
-      // Already a note here, do nothing (avoid overlap)
-      return;
+    // Draw mode on empty cell -> create new note
+    if (effectiveTool === 'draw') {
+      const id = nextId++;
+      setNotes(prev => [...prev, { id, pitch, col, len: 1, instrument }]);
+      synthEngine.init().then(() => synthEngine.previewNote(instrument, pitch, 100, 200));
+
+      // Start drag to extend length
+      dragRef.current = {
+        active: true, noteId: id, startCol: col, startPitch: pitch,
+        mode: 'create', origCol: col, origLen: 1, origPitch: pitch,
+      };
+      (e.target as Element).setPointerCapture(e.pointerId);
     }
-
-    const id = nextId++;
-    setNotes(prev => [...prev, { id, pitch, col, len: 1 }]);
-    synthEngine.init().then(() => synthEngine.previewNote('synth-lead', pitch, 100, 200));
-
-    // Start drag to extend length
-    dragRef.current = {
-      active: true, noteId: id, startCol: col, startPitch: pitch,
-      mode: 'create', origCol: col, origLen: 1, origPitch: pitch,
-    };
-    (e.target as Element).setPointerCapture(e.pointerId);
-  }, [tool, notes, findNoteAt, getGridPos, setNotes, scroll]);
+  }, [tool, instrument, notes, findNoteAt, getGridPos, setNotes, scroll]);
 
   // ===== POINTER MOVE =====
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
